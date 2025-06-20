@@ -50,7 +50,7 @@ const config: Config = {
   },
   sessionStorage: {
     enable: true, // We should save the session storage?
-    wwjsPath: './'
+    wwjsPath: '/session'
   },
   selfMessage: {
     /** Skip prefix for self messages */

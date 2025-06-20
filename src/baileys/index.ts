@@ -4,12 +4,14 @@ import { useMongoDBAuthState } from 'mongo-baileys';
 import { Boom } from '@hapi/boom';
 import * as fs from 'fs';
 import path from 'path';
+import qrcode from 'qrcode-terminal';
 
 
 /* Local modules */
 import { messagesHandler } from './handlers/messages';
 import { connectToMongoDB } from './database/mongo';
 import { ENV } from './env';
+import config from '../whatsapp-ai.config';
 
 
 /* Util */
@@ -19,11 +21,13 @@ const connectToDatabase = async () => {
       ( await connectToMongoDB() ).collection as any
     );
   } else {
-    return await useMultiFileAuthState('auth_info_baileys');
+    const wwjsPath = path.join(process.cwd(), config.sessionStorage.wwjsPath)
+    if (!fs.existsSync(wwjsPath)) {
+        fs.mkdirSync(wwjsPath, { recursive: true });
+    }
+    return await useMultiFileAuthState(wwjsPath);
   }
 }
-
-const credentialsDirPath: string = path.join(process.cwd(), './auth_info_baileys');
 
 
 /* Connect to WhatsApp */
@@ -32,11 +36,15 @@ export async function connectToWhatsApp() {
   const { state, saveCreds } = await connectToDatabase();
 
   // Create a new WhatsApp socket connection
-  const sock = makeWASocket({ printQRInTerminal: true, auth: state });
+  const sock = makeWASocket({ auth: state });
 
   // Handle connection updates
   sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect } = update;
+    const { connection, lastDisconnect, qr } = update;
+
+    if (qr) {
+      qrcode.generate(qr, { small: true });
+    }
 
     try {
       if (connection === 'close' && lastDisconnect) {
@@ -47,7 +55,8 @@ export async function connectToWhatsApp() {
           connectToWhatsApp();
         } else {
           if (lastDisconnect.error) {
-            fs.rmSync(credentialsDirPath, { force: true, recursive: true });
+            const wwjsPath = path.join(process.cwd(), config.sessionStorage.wwjsPath)
+            fs.rmSync(wwjsPath, { force: true, recursive: true });
             connectToWhatsApp();
           }
         }

@@ -8,7 +8,9 @@ ARG SSH_KEY
 ENV SSH_KEY=$SSH_KEY
 
 RUN mkdir -p /root/.ssh && \
-    chmod 700 /root/.ssh
+    chmod 700 /root/.ssh && \
+    mkdir -p /session && \
+    chmod 700 /session
 
 # Create id_rsa from string arg, and set permissions
 
@@ -43,7 +45,6 @@ COPY yarn.lock ./
 COPY tsconfig.json ./
 
 COPY src ./src
-COPY static ./static
 
 RUN yarn
 
